@@ -1,0 +1,27 @@
+# Secrets — never commit these
+.env
+.soc-secrets.env
+*.env
+secrets.txt
+passwords.txt
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+*.swp
+*.swo
+
+# Large files
+*.pcap
+*.zip
+*.tar.gz
