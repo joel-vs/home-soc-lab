@@ -36,6 +36,9 @@ All SOC platform tools run inside VMs on the laptop:
 
 ### Why This Split?
 The Pi handles all network-facing and sensor work because it sits permanently on the network as a dedicated low-power device. The laptop hosts the analysis and response platform since those tools need more RAM and processing power. Metasploitable is kept on an isolated Host-Only network to prevent its intentional vulnerabilities from exposing the home network to risk.
+
+### Docker installation
+Wazuh and ELK will run inside Docker, which is an isolated container where we can run applications with all its dependencies, avoiding conflicts with other software on the system. Docker Compose uses a single YAML file containing all the settings required to easily start and stop multiple services together with one command. The `-d` flag runs containers in the background so the terminal remains usable. By adding myself to the docker group, I don't need to run `sudo` each time I run a docker command. Verified the installation worked by running `docker run hello-world` without `sudo`.
 <!--
 Write in your own words:
 - What hardware you're using and why
