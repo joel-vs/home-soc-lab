@@ -6,8 +6,36 @@ Personal notes written during the build process. Not a tutorial — a record of 
 
 ## Phase 1 — Prerequisites & Planning
 
-**Date:**  
+**Date:**  21-4-26
 
+### Main Machine — HP Laptop
+- **CPU:** AMD Ryzen 5 5500U (6 cores, 12 threads)
+- **RAM:** 16 GB
+- **Storage:** ~140 GB available
+- **OS:** Windows 11 (host)
+
+### Virtual Machines (running on laptop)
+All SOC platform tools run inside VMs on the laptop:
+- **Ubuntu 22.04 VM** — SIEM, incident response, SOAR, 
+  threat intelligence, AI integration
+  - Allocated: 8 GB RAM, 3 cores, 85 GB storage
+  - Network: Bridged (192.168.1.100) + Host-Only (192.168.100.10)
+- **Metasploitable 2 VM** — attack simulation target
+  - Allocated: 512 MB RAM, 1 core
+  - Network: Host-Only only (192.168.100.20) — isolated from 
+    home network for safety
+
+### Network Sensor — Raspberry Pi 5
+- **RAM:** 8 GB
+- **Storage:** 234 GB available
+- **OS:** Raspberry Pi OS Bookworm (64-bit)
+- **Connection:** Ethernet
+- **Static IP:** 192.168.1.10
+- **Role:** Runs Suricata IDS, Zeek NSM, Cowrie honeypot, 
+  and Wazuh agent — all network-facing tools run here
+
+### Why This Split?
+The Pi handles all network-facing and sensor work because it sits permanently on the network as a dedicated low-power device. The laptop hosts the analysis and response platform since those tools need more RAM and processing power. Metasploitable is kept on an isolated Host-Only network to prevent its intentional vulnerabilities from exposing the home network to risk.
 <!--
 Write in your own words:
 - What hardware you're using and why
