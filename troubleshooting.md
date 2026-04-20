@@ -53,7 +53,7 @@ Ran `nmcli -v` which returned a version number, confirming that NetworkManager w
 Raspberry Pi OS Bookworm (released 2023) replaced `dhcpcd` with `NetworkManager` as the default network manager. The `dhcpcd.conf` file is completely ignored on this OS version because the service doesn't exist.
 
 **Fix:**  
-Used `nmcli` (NetworkManager CLI) to configure a static IP address for the Ethernet connection profile. Verified the configuration using `ip a`, confirming that the static IP `192.168.1.10` was successfully assigned to the network interface..
+Used `nmcli` (NetworkManager CLI) to configure a static IP address for the Ethernet connection profile. Verified the configuration using `ip a`, confirming that the static IP `192.168.1.10` was successfully assigned to the network interface.
 
 **Lesson Learned:**  
 Always check the OS version before following network configuration guides. Many online guides still reference `dhcpcd` which is outdated for Raspberry Pi OS Bookworm. Verify the active network manager with `nmcli -v` before making changes.
@@ -82,6 +82,27 @@ Subsequently set a permanent static IP (`192.168.1.10`) on the ethernet interfac
 
 **Lesson Learned:**  
 Whenever a device switches network interfaces or reconnects to the network, its IP address may change. Always run `ip a` after any network change to verify the current IP before attempting a remote connection. Setting a static IP permanently resolves this — once set, the Pi always uses `192.168.1.10` regardless of how many times it reboots or reconnects.
+
+---
+
+## Issue 004 — Not getting internet connectivity on Ubuntu VM after setting static IP 
+
+**Phase:** Phase 1 — Prerequisites & Planning  
+**Date:** 21-4-26
+
+**Symptom:**  
+Internet connectivity on ubuntu VM got disabled after changing to the static IP `192.168.1.100`.
+
+**Investigation:**  After running ping `8.8.8.8`, it returned 'destination host unreachable', confirming that it was a routing issue rather than a DNS issue. Running `ipconfig` on the Windows host revealed that the VM was on NAT mode which uses VMware's internal virtual network.
+
+**Root Cause:**  
+The VM was configured in NAT networking mode. NAT creates an internal virtual network between the VM and the host — the VM's traffic goes through VMware's virtual NAT device, not directly through the real router.
+
+**Fix:**  
+Updated the network connection to Bridged under 'virtual network editor' in VMware settings and chose the host machine's Wi-Fi adapter. Under the VM settings changed the network adapter from NAT to Bridged.
+
+**Lesson Learned:**  
+When setting a static IP on a VM, always first confirm which networking mode the VM is using before configuring the gateway. NAT and Bridged modes have fundamentally different network architectures — NAT uses VMware's internal virtual gateway while Bridged connects directly to the real network and uses the physical router as the gateway. Setting a gateway that doesn't match the networking mode will break internet connectivity.
 
 ---
 
