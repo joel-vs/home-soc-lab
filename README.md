@@ -21,11 +21,11 @@ Example: "This project is a home SOC lab I built to gain hands-on experience wit
 <!-- Add your network diagram image here once you create it in draw.io -->
 <!-- ![Network Diagram](architecture/network-diagram.png) -->
 
-| Device | Role | IP Address |
-|--------|------|------------|
-| Main PC (Ubuntu VM) | SIEM, IR Platform, SOAR, Threat Intel | 192.168.1.x |
-| Raspberry Pi 4 | Network Sensor, IDS, Honeypot | 192.168.1.10 |
-| Attack VM | Simulated target (Metasploitable) | 192.168.1.x |
+| Device | Role | Real Network | Lab Network |
+|--------|------|--------------|-------------|
+| Main PC (Ubuntu VM) | SIEM, IR Platform, SOAR, Threat Intel | 192.168.1.100 | 192.168.100.10 |
+| Raspberry Pi 4 | Network Sensor, IDS, Honeypot | 192.168.1.10 | NA |
+| Attack VM | Simulated target (Metasploitable) | NA | 192.168.100.20 |
 
 ---
 
