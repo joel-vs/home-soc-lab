@@ -1,0 +1,98 @@
+nano ~/home-soc-lab/runbooks/runbooks.md
+
+You already have 4 runbook templates in there from earlier. Now fill in each one properly based on what you've actually built and learned.
+
+What to write for each runbook — in your own words:
+
+SSH Brute Force runbook — based on what you know about Cowrie and Wazuh:
+
+
+
+
+
+What alert fires and where you see it
+
+
+
+How you identify the source IP
+
+
+
+How you check it on AbuseIPDB
+
+
+
+How you block it with UFW on the Pi
+
+
+
+How you document it in TheHive
+
+Port Scan runbook — based on your Suricata experience:
+
+
+
+
+
+What Suricata rule fires (your custom NMAP SCAN DETECTED rule)
+
+
+
+What you look at in eve.json
+
+
+
+How you identify the scan pattern
+
+
+
+What MITRE ATT&CK technique it maps to (T1595 — Active Scanning)
+
+Honeypot Compromise runbook — based on Cowrie:
+
+
+
+
+
+What event in cowrie.json indicates a successful login
+
+
+
+How you replay the session with playlog
+
+
+
+What IOCs you extract
+
+
+
+How you cross reference with Zeek logs
+
+DNS Exfiltration runbook — based on Zeek:
+
+
+
+
+
+What unusual DNS patterns look like in dns.log
+
+
+
+How you search for suspicious domains
+
+
+
+How you would block via Pi-hole
+
+Step 2 — Commit and push:
+
+bash
+
+cd ~/home-soc-lab
+git add runbooks/runbooks.md
+git commit -m "add incident response runbooks for all attack scenarios"
+git push
+
+Important — write these in your own words
+
+Don't copy the table from the guide. Write each runbook as if you're explaining to a colleague what to do when that alert fires. Use what you've actually learned and experienced during this build.
