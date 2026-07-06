@@ -46,11 +46,11 @@ Wazuh and ELK will run inside Docker, which is an isolated container where we ca
 
 **Date:**  02-05-26
 
-**OS Version:** Raspberry Pi OS Bookworm (64-bit)  
-**Pi Model:** Pi 5B  
+**OS Version:** Raspberry Pi OS Bookworm (64-bit)
+**Pi Model:** Pi 5B
 **RAM:** 8GB
-**Connection:** Ethernet (eth0)  
-**Static IP:** 192.168.1.10  
+**Connection:** Ethernet (eth0)
+**Static IP:** 192.168.1.10
 
 Flashed the OS onto a micro SD card using a card reader. Inserted the micro SD card into the slot available on Pi and installed the OS. To configure static IP. I used nmcli. Faced some issues with DHCP reservation, static IP and VNC not being able to connect, all of which are documented in [troubleshooting log](troubleshooting.md).
 
@@ -61,121 +61,108 @@ Filebeat is a lightweight log shipper that collects log files from Suricata, Zee
 
 ## Phase 3 — Wazuh + ELK Stack
 
-**Date:**  
+**Date:** 03-06-26
 
-<!--
-Write in your own words:
-- What Wazuh does and why you chose it
-- What the ELK stack components each do
-- How Docker Compose works and why you used it
-- What the agent on the Pi does and how it communicates with the manager
-- What dashboards you set up and what they show
--->
+**Virtual Memory Configuration:** During the initial deployment of the server stack, a critical host-level virtual memory limitation must be configured to prevent database failures. Elasticsearch architectures require a significantly higher number of memory map areas than standard Linux operating system defaults allow. To avoid immediate container crashes, the host machine's virtual memory limits were permanently increased by appending the configuration setting `vm.max_map_count=262144` into the host system file located at `/etc/sysctl.conf`. Skipping this mandatory step causes the indexer container to repeatedly panic and crash on boot.
+
+**File Integrity Monitoring (FIM) Architecture:** The Wazuh manager is configured to perform active File Integrity Monitoring (FIM) across the system to detect unauthorized modifications and potential malware indicators. The monitoring scope targets specific, critical directories, each serving a distinct defensive purpose:
+
+- `/etc:` Tracks all core system configuration files. Any modification here, such as editing an existing configuration script or adding an unauthorized user account, triggers an immediate security alert.
+
+- `/usr/bin, /usr/sbin, /bin, /sbin:` Monitors essential system binaries. If a threat actor or malicious software package attempts to replace a standard system command with a compromised binary, the engine flags the file modification instantly.
+
+- `/boot:` Safeguards the underlying bootloader files. Because rootkits and advanced persistent threats frequently target the boot sequence to establish deep persistence, keeping this folder locked down is critical.
+
+- `/home:` Audits user home directories across the endpoint. This configuration explicitly detects if an attacker attempts to drop malicious scripts or alter individual user shell configurations after gaining initial access to the system.
 
 ---
 
 ## Phase 4 — Suricata & Zeek
 
-**Date:**  
+**Date:**  10-06-26
 
-<!--
-Write in your own words:
-- The difference between Suricata and Zeek — they do different things
-- What "rule-based detection" means (Suricata) vs "behavioural logging" (Zeek)
-- What the Emerging Threats ruleset is
-- What Filebeat is doing here — forwarding these logs to Elasticsearch
-- What eve.json is and why it matters
--->
+**Suricata vs. Zeek:** In a production Network Security Monitoring (NSM) architecture, Suricata and Zeek serve fundamentally different yet highly complementary roles. Suricata acts as a signature-based intrusion detection system (IDS), evaluating live traffic against thousands of known threat patterns to flash immediate alerts when an attack occurs. In contrast, Zeek functions as a behavioral logger, recording comprehensive, protocol-specific metadata (such as connections, DNS requests, and HTTP handshakes) without judging whether the traffic is malicious.
+
+During an incident, Suricata provides the initial "fire alarm" indicating that something happened, while Zeek provides the rich forensic trail allowing an analyst to investigate exactly what happened before, during, and after the alarm tripped. For example, when an aggressive Nmap scan was launched against the Raspberry Pi, Suricata immediately fired a high-severity alert to signal the probe. Concurrently, Zeek silently recorded every single connection attempt in its conn.log file, mapping out the precise order of the probed ports, connection durations, and byte sizes, giving the SOC full investigative context.
+
+**Custom Suricata Rule Analysis:** o catch scanning behavior early, a custom rule was written and loaded into the detection engine:
+`alert tcp any any -> 192.168.1.10 any (msg:"NMAP SCAN DETECTED"; flags:S; threshold: type threshold, track by_src, count 10, seconds 1; sid:9000001; rev:1;)`
+
+This signature works by monitoring all incoming TCP traffic directed at the Raspberry Pi's static IP address (`192.168.1.10`). It looks specifically for packets where only the SYN flag (`flags:S`) is set, which is the classic indicator of a half-open port scan. To prevent normal web traffic from causing false alarms, the rule uses a rate-limiting threshold component; it will only trigger and log the `"NMAP SCAN DETECTED"` alert if a single source IP (`track by_src`) floods the sensor with 10 or more SYN packets (`count 10`) within a tight one-second window (`seconds 1`).
+
+**The Critical Importance of HOME_NET Configuration:** A common operational pitfall in IDS engineering is leaving the internal network variables at their factory defaults. Suricata relies heavily on the variables defined in its `suricata.yaml` file—specifically `HOME_NET` (the network you protect) and `EXTERNAL_NET` (the untrusted outside world)—to judge directionality in signature tracking. If `HOME_NET` is misconfigured or left as `any`, rules designed to inspect traffic coming from the outside into your local assets will fail to evaluate correctly. Correctly defining these variables ensures the processing engine focuses its inspection power on the right traffic vectors, preventing massive blind spots that frequently cause real-world deployments to miss critical threat indicators.
 
 ---
 
 ## Phase 5 — Cowrie Honeypot
 
-**Date:**  
+**Date:**  13-06-26
 
-<!--
-Write in your own words:
-- What a honeypot is and why it's valuable
-- Why Cowrie runs as an unprivileged user (security isolation)
-- What port 2222 is for and why real SSH stays on port 22
-- What the fake filesystem does and why it matters
-- What kind of data Cowrie captures
--->
+**Operational Security & Isolation Architecture:** The Cowrie honeypot is deployed using strict security isolation principles to protect the host operating system from potential compromise. The service runs entirely under a dedicated, unprivileged system user account (`cowrie`), ensuring it can only access its own environment and execution binaries. If a sophisticated threat actor manages to escape the emulated sandbox shell, they remain trapped within the tightly restricted context of this low-privilege user account. Because the account lacks access to core system tools or root-level permissions, the attacker has no clear path to escalate privileges, manipulate hardware, or damage the underlying Raspberry Pi operating system.
+
+**Custom Deployment & Risk Management Strategy:** In this lab architecture, Cowrie is kept completely internal to the private network and is intentionally not port-forwarded to the public internet. While exposing the honeypot to the outside world would generate vast amounts of real-world automated brute-force data, doing so without dedicated hardware VLAN isolation poses an unacceptable risk to a home network. By limiting access to the internal network boundary, the honeypot remains a safe, controlled environment to study lateral movement and test internal detection engineering without introducing external vulnerability exposure. The real SSH management port for the Pi remains securely bound to port 22, while the honeypot listens on port 2222 with UFW rules tightly managing access.
+
+**Session Verification & Log Capture Analysis:** To verify that the interaction logging pipeline was functioning correctly, an active session was initiated from the Ubuntu VM (`192.168.1.100`) to the honeypot on port 2222. Several diagnostic commands were executed inside the fake environment to test the depth of the emulation:
+
+- `whoami` — Returned a false `root` status, successfully tricking the session into believing administrative access was achieved.
+
+- `ls` — Displayed a pre-configured, fake directory structure designed to mimic a standard Linux file layout.
+
+- `cat /etc/passwd` — Streamed a fabricated user credentials list to simulate deep system enumeration.
+
+- `uname -a` — Output a fake kernel version string to mislead the operating system profiling tools.
+
+Every element of this interactive session was completely parsed and recorded by the honeypot framework. Cowrie successfully captured the incoming source IP, exact login timestamps, the literal text of every command typed, the fake outputs returned to the terminal, and the total duration of the connection. The complete interaction history was structured into `cowrie.json` for SIEM forwarding, and the raw terminal stream was written to the `tty` logging directory, allowing analysts to replay the attacker's exact keystrokes in real time.
 
 ---
 
 ## Phase 6 — Incident Response (TheHive)
 
-**Date:**  
+**Date:**  14-06-26
 
-<!--
-Write in your own words:
-- What TheHive does and how it fits into a SOC workflow
-- What a "case" is in TheHive
-- What your Python triage script does step by step
-- What AbuseIPDB is and how you use it
--->
+**Docker Architecture Comparison: TheHive vs. Wazuh Stack:** While spinning up the full Wazuh platform requires orchestrating multiple interdependent services (the Manager, Indexer, and Dashboard), generating intricate SSL certificate structures, and maintaining complex multi-volume storage arrays, TheHive operates on a far leaner structural footprint. In this deployment, TheHive requires only a single main container service, exposes a single communication port, and maps a single data volume. Because it avoids the massive initialization handshakes, cryptographic checks, and database validation loops that force Wazuh to take 5 to 10 minutes to boot, TheHive successfully initializes and reaches a fully functional operational state in just a few seconds.
+
+**Docker Compose Configuration Analysis:** To ensure seamless integration with the existing incident response pipeline, the environment configurations are mapped explicitly inside the orchestration file:
+
+- __Services Definition:__ Declares the single core application container, isolating its execution from the rest of the host operating system while ensuring standard runtime properties are automatically handled by the engine.
+
+- __Port Mapping Configuration:__ Explicitly bridges the container's internal web server port out to the host system network interface, providing a streamlined browser access point for analysts to access the ticketing platform dashboard.
+
+- __Volume Persistence Matrix:__ Maps a local directory path directly to the internal database folders of the container, ensuring that case documentation, incident files, and evidence artifacts survive container updates or system reboots.
 
 ---
 
 ## Phase 7 — Attack Simulation
 
-**Date:**  
+**Date:** 15-06-26
 
-<!--
-Write in your own words:
-- What Metasploitable is and why it's safe to attack
-- Each attack you ran and what you were trying to achieve
-- What tool you used for each attack
-- General observations about how quickly alerts fired
--->
+**Environment Safety & Target Isolation:** The attack simulation phase uses a dedicated Metasploitable 2 instance as the primary target. Because this machine is intentionally riddled with severe vulnerabilities, it is strictly bound to a Host-Only network adapter. This isolation completely cuts the VM off from the home router and the public internet, ensuring that exploit traffic, brute-force noise, and active shells remain entirely confined to the sandboxed hypervisor environment.
 
----
+**Attack Execution & Telemetry Validation:** Multiple offensive techniques were simulated from the Ubuntu VM against the target to validate the SOC detection pipeline:
 
-## Phase 8 — Shuffle SOAR
+- __Network Reconnaissance:__ Nmap scans were launched to profile open ports and services, successfully verifying that custom rate-limiting rules flag aggressive sweeping behavior.
 
-**Date:**  
+-__Authentication Brute-Forcing:__ Automated SSH password attacks were executed against the target, verifying that the SIEM flags rapid authentication failures and clusters them as a single distributed attack event.
 
-<!--
-Write in your own words:
-- What SOAR means and why it matters in a real SOC
-- The difference between your manual Python script and Shuffle
-- How the Wazuh webhook integration works
-- Walk through your playbook logic step by step
--->
+- __Exploitation:__ Known network exploits were fired to drop interactive reverse shells, confirming that host and network sensors actively pick up post-exploitation behavior like sudden privilege escalation or anomalous outbound connections.
 
 ---
 
-## Phase 9 — MISP
+## Phase 08 — AI Integration
 
-**Date:**  
-
-<!--
-Write in your own words:
-- What threat intelligence is and why SOCs use it
-- What an IOC (Indicator of Compromise) is
-- What feeds you enabled and what each one provides
-- How the Wazuh integration works — what happens when a match is found
-- How you documented a honeypot session as a MISP event
--->
-
----
-
-## Phase 10 — AI Integration
-
-**Date:**  
+**Date:**  17-06-26
 
 **LLM:** Llama 3 8B via Ollama  
 **ML:** Isolation Forest (scikit-learn)  
 
-<!--
-Write in your own words:
-- What Ollama is and how it works
-- Why running a local LLM is better than a cloud API for this use case
-- What each of the four AI features does
-- What Isolation Forest is — how does it detect anomalies?
-- How the AI alert triage integrates with your existing pipeline
-- Quality of the AI output — was it useful? Any limitations?
--->
+**Local Inference vs. Cloud Privacy:** The AI integration architecture uses a completely localized deployment model, running Llama 3 via Ollama directly on the local server infrastructure. While cloud-based LLM APIs offer faster processing times, a local deployment model is much better for security operations. In a real SOC environment, sending raw, unredacted security alerts containing internal IP addresses, system logs, usernames, and proprietary network metadata to a third-party cloud provider violates strict data privacy policies. Running a local model ensures that sensitive security telemetry never leaves the controlled boundary of the laboratory network.
+
+**Machine Learning & LLM Triage Pipeline:** The defense framework integrates standard rule-based alerts with advanced analytics through two distinct layers:
+
+- __Anomaly Detection via Isolation Forest:__ An unsupervised machine learning algorithm watches normal log volumes and connection durations. By profiling what typical system behavior looks like, the model flags unusual out-of-bounds telemetry—such as a sudden spike in data transfer sizes—that standard static rules might miss.
+
+- __Automated Alert Triage:__ High-priority alerts flagged by the system are automatically funneled into a Python script that prompts Llama 3. The local LLM acts as an assistant analyst, reading the raw JSON alert data, translating technical jargon into plain text, and outputting an immediate summary along with actionable remediation steps.
+
+**Technical Limitations & Performance Reality:** While the AI output provides excellent contextual analysis and saves time during initial scoping, local processing has clear hardware bottlenecks. Running an 8B parameter model on non-dedicated CPU hardware introduces a significant processing lag, with complex summaries taking anywhere from 1 to 3 minutes to generate. This delay means the AI is best used for asynchronous case enrichment and ticketing assistance rather than real-time blocking actions.
 
 ---
