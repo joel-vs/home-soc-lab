@@ -82,10 +82,10 @@ Traffic on the Raspberry Pi sensor interface is captured in real time by Suricat
 
 | Report | Attack Type | Severity | Date |
 |--------|------------|----------|------|
-| [IR-001](reports/IR-001-nmap-scan.md) | Nmap Port Scan / Reconnaissance | Medium | 04-05-2026 |
-| [IR-002](reports/IR-002-ssh-brute.md) | SSH Brute Force Attack | High | 15-05-2026 |
-| [IR-003](reports/IR-003-honeypot-compromise.md) | Honeypot Interaction / Compromise | High | 06-06-2026 |
-| [IR-004](reports/IR-004-gobuster.md) | Gobuster Directory Brute Force | Medium | 18-06-2026 |
+| [IR-001](reports/IR-001-nmap-scan.md) | Nmap Port Scan / Reconnaissance | Medium | 31-05-2026 |
+| [IR-002](reports/IR-002-ssh-brute.md) | SSH Brute Force Attack | High | 01-06-2026 |
+| [IR-003](reports/IR-003-honeypot-compromise.md) | Honeypot Interaction / Compromise | High | 01-06-2026 |
+| [IR-004](reports/IR-004-gobuster.md) | Gobuster Directory Brute Force | Medium | 01-06-2026 |
 
 ---
 
